@@ -1,0 +1,16 @@
+[
+{
+  "modid": "iextras",
+  "name": "iExtras",
+  "description": "iExtras - Iskallian Extras",
+  "version": "0.0.1-alpha",
+  "mcversion": "1.10.2",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Winter_Grave"],
+  "credits": "Iskall85",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
