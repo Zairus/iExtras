@@ -8,14 +8,16 @@ import zairus.iextras.IExtras;
 
 public class IEBlocks
 {
+	public static final Block IEXECUTOR;
+	
 	static
 	{
-		;
+		IEXECUTOR = new BlockIExecutor().setBlockName("iexecutor");
 	}
 	
 	public static void register()
 	{
-		;
+		((IBlockBase)IEXECUTOR).register();
 	}
 	
 	protected static void registerBlock(Block block, String name, Class<? extends TileEntity> teClazz, String id, boolean model)

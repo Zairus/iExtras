@@ -2,6 +2,8 @@ package zairus.iextras;
 
 import org.apache.logging.log4j.Logger;
 
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.SidedProxy;
@@ -31,7 +33,13 @@ public class IExtras
 	
 	public static Logger logger;
 	
-	//Creative tabs
+	public static CreativeTabs creativeTab = new CreativeTabs("iextras") {
+		@Override
+		public Item getTabIconItem()
+		{
+			return Item.getItemFromBlock(IEBlocks.IEXECUTOR);
+		}
+	};
 	
 	@Mod.EventHandler
 	public void preInit(FMLPreInitializationEvent event)

@@ -1,0 +1,12 @@
+{
+    "parent": "block/cube",
+    "textures": {
+        "particle": "iextras:blocks/executor_top",
+        "down": "iextras:blocks/executor_bottom",
+        "up": "iextras:blocks/executor_top",
+        "north": "iextras:blocks/executor_north",
+        "east": "iextras:blocks/executor_east",
+        "south": "iextras:blocks/executor_south",
+        "west": "iextras:blocks/executor_west"
+    }
+}
