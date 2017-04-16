@@ -1,5 +1,10 @@
 {
-    "variants": {
-        "normal": { "model": "iextras:iexecutor" }
-    }
+	"variants": {
+		"facing=up": { "model": "iextras:iexecutor" },
+		"facing=down": { "model": "iextras:iexecutor", "x": 180 },
+		"facing=east": { "model": "iextras:iexecutor", "y": 90, "x": 90 },
+		"facing=south": { "model": "iextras:iexecutor", "y": 180, "x": 90 },
+		"facing=west": { "model": "iextras:iexecutor", "y": 270, "x": 90 },
+		"facing=north": { "model": "iextras:iexecutor", "y": 0, "x": 90 }
+	}
 }

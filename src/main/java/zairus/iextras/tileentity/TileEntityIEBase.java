@@ -70,6 +70,11 @@ public abstract class TileEntityIEBase extends TileEntityLockableLoot implements
 		return IEConstants.MODID + ":" + this.defaultName;
 	}
 	
+	public String getGUIDisplayName()
+	{
+		return this.hasCustomName()? this.customName : "Iskallian Executor";
+	}
+	
 	@Override
 	public String getName()
 	{
@@ -113,7 +118,7 @@ public abstract class TileEntityIEBase extends TileEntityLockableLoot implements
 	public ItemStack getStackInSlot(int index)
 	{
 		this.fillWithLoot((EntityPlayer)null);
-		return getChestContents()[index];
+		return index < getChestContents().length ? getChestContents()[index] : null;
 	}
 	
 	@Override

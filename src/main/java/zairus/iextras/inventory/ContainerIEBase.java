@@ -15,21 +15,18 @@ import zairus.iextras.tileentity.TileEntityIEBase;
 
 public class ContainerIEBase extends Container
 {
-	private IInventory inventory;
+	protected IInventory inventory;
 	
-	private int rows = 3;
-	private int columns = 9;
+	protected int rows = 3;
+	protected int columns = 9;
 	
-	public ContainerIEBase(IInventory playerInventory, IInventory inventory, EntityPlayer player, int r, int c)
+	public ContainerIEBase(IInventory playerInventory, IInventory inventory, EntityPlayer player, int r, int c, int xOffset, int yOffset)
 	{
 		this.inventory = inventory;
 		this.inventory.openInventory(player);
 		
 		this.rows = r;
 		this.columns = c;
-		
-		int xOffset = 8;
-		int yOffset = 16;
 		
 		if (inventory instanceof TileEntityIEBase)
 		{
@@ -58,15 +55,20 @@ public class ContainerIEBase extends Container
 		{
 			for (int j1 = 0; j1 < 9; ++j1)
 			{
-				this.addSlotToContainer(new Slot(playerInventory, j1 + l * 9 + 9, 8 + j1 * 18, (16 + 66) + l * 18));
+				this.addSlotToContainer(new Slot(playerInventory, j1 + l * 9 + 9, 8 + j1 * 18, (18 + 66) + l * 18));
 			}
 		}
 		
 		// Hotbar
         for (int i1 = 0; i1 < 9; ++i1)
         {
-            this.addSlotToContainer(new Slot(playerInventory, i1, 8 + i1 * 18, 16 + 124));
+            this.addSlotToContainer(new Slot(playerInventory, i1, 8 + i1 * 18, 18 + 124));
         }
+	}
+	
+	public ContainerIEBase(IInventory playerInventory, IInventory inventory, EntityPlayer player, int r, int c)
+	{
+		this(playerInventory, inventory, player, r, c, 8, 16);
 	}
 	
 	public ContainerIEBase(IInventory playerInventory, IInventory inventory, EntityPlayer player)
