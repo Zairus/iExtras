@@ -178,12 +178,12 @@ public abstract class TileEntityIEBase extends TileEntityLockableLoot implements
 		
 		getChestContents()[index] = stack;
 		
-        if (stack != null && stack.stackSize > this.getInventoryStackLimit())
-        {
-            stack.stackSize = this.getInventoryStackLimit();
-        }
-        
-        this.markDirty();
+		if (stack != null && stack.stackSize > this.getInventoryStackLimit())
+		{
+			stack.stackSize = this.getInventoryStackLimit();
+		}
+		
+		this.markDirty();
 	}
 	
 	@Override

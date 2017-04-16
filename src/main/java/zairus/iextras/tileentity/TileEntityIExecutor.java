@@ -1,32 +1,35 @@
 package zairus.iextras.tileentity;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldServer;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import zairus.iextras.IExtras;
+import zairus.iextras.entity.IEFakePlayer;
 
 public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory
 {
-	private FakePlayer fakePlayer = null;
-	
+	private IEFakePlayer fakePlayer = null;
 	private ItemStack[] chestContents = new ItemStack[10];
+	private int workingTicks = 0;
+	
 	protected String defaultName = "iexecutor";
 	
 	public TileEntityIExecutor()
@@ -38,10 +41,7 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	{
 		if (this.worldObj != null && !this.worldObj.isRemote && this.fakePlayer == null)
 		{
-			this.fakePlayer = new FakePlayer((WorldServer)this.worldObj, new GameProfile(UUID.fromString("858883b3-cc29-44f9-ada3-01075eee02b8"), "Iskallian_Executor"));
-			
-			//if (FMLCommonHandler.instance().getClientToServerNetworkManager() != null)
-				//this.fakePlayer.connection = new NetHandlerPlayServer(FMLCommonHandler.instance().getMinecraftServerInstance(), FMLCommonHandler.instance().getClientToServerNetworkManager(), this.fakePlayer);
+			this.fakePlayer = new IEFakePlayer((WorldServer)this.worldObj, new GameProfile(UUID.fromString("858883b3-cc29-44f9-ada3-01075eee02b8"), "Iskallian_Executor"), this);
 		}
 	}
 	
@@ -51,14 +51,25 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		if (this.worldObj.isRemote)
 			return;
 		
+		++workingTicks;
+		
+		if (workingTicks % 10 == 0)
+		{
+			rightClick();
+		}
+	}
+	
+	private void rightClick()
+	{
 		initializeFakePlayer();
 		
 		if (this.fakePlayer != null)
 		{
-			ItemStack actionStack = this.getStackInSlot(9);
-			
 			// DUNSWE
 			int meta = this.getBlockMetadata();
+			EnumFacing ieFacing = EnumFacing.getFront(meta);
+			BlockPos pos = this.getPos();
+			pos = pos.offset(ieFacing);
 			
 			// 0 south
 			// 90 west
@@ -70,38 +81,98 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 			// 90 down
 			// 180 up
 			
-			EnumFacing ieFacing = EnumFacing.getFront(meta);
-			BlockPos pos = this.getPos().offset(ieFacing);
-			
 			this.fakePlayer.setPositionAndRotation(
 					pos.getX(), 
 					pos.getY() - 1, 
 					pos.getZ(), 
-					0.0F, //Yaw
-					0.0F); //Pitch
+					0.0F,
+					0.0F);
 			
-			if (actionStack != null)
+			ItemStack actionStack = this.getStackInSlot(9);
+			
+			if (!rightClickBlock(pos, actionStack))
 			{
-				//this.fakePlayer.inventory.setInventorySlotContents(EntityEquipmentSlot.MAINHAND, actionStack);
+				rightClickEntity(pos, actionStack);
+			}
+		}
+	}
+	
+	private boolean rightClickEntity(BlockPos pos, ItemStack actionStack)
+	{
+		boolean success = false;
+		
+		if (actionStack != null)
+		{
+			List<Entity> entities = this.worldObj.getEntitiesWithinAABB(Entity.class, new AxisAlignedBB(pos));
+			
+			if (entities.size() > 0)
+			{
+				Entity target = entities.get(0);
+				
 				this.fakePlayer.setHeldItem(EnumHand.MAIN_HAND, actionStack);
 				this.fakePlayer.setActiveHand(EnumHand.MAIN_HAND);
-				ActionResult<ItemStack> result = actionStack.getItem().onItemRightClick(actionStack, worldObj, fakePlayer, EnumHand.MAIN_HAND);
 				
-				if (result.getResult() != actionStack)
-				{
+				this.fakePlayer.interact(target, actionStack, EnumHand.MAIN_HAND);
+				
+				ItemStack heldStack = this.fakePlayer.getHeldItemMainhand();
+				
+				if (actionStack.stackSize <= 0)
 					this.setInventorySlotContents(9, null);
-					for (int i = 0; i < 9; ++i)
-					{
-						if (this.getStackInSlot(i) == null)
-						{
-							this.setInventorySlotContents(i, result.getResult());
-							break;
-						}
-					}
-				}
 				
-				IExtras.logger.info("r:" + result.getResult() + ", as:" + actionStack + " == " + this.fakePlayer.getPosition() + " | " + this.getPos());
+				if (heldStack != null && heldStack != actionStack)
+				{
+					addStackToAvailableSlot(heldStack);
+					success = true;
+				}
 			}
+		}
+		
+		return success;
+	}
+	
+	private boolean rightClickBlock(BlockPos pos, ItemStack actionStack)
+	{
+		boolean success = false;
+		
+		if (actionStack != null)
+		{
+			this.fakePlayer.setHeldItem(EnumHand.MAIN_HAND, actionStack);
+			this.fakePlayer.setActiveHand(EnumHand.MAIN_HAND);
+			ActionResult<ItemStack> result = actionStack.getItem().onItemRightClick(actionStack, worldObj, fakePlayer, EnumHand.MAIN_HAND);
+			
+			if (actionStack.stackSize <= 0 || actionStack.getItem() == Items.WATER_BUCKET)
+				this.setInventorySlotContents(9, null);
+			
+			if (result != null && result.getResult() != actionStack)
+			{
+				addStackToAvailableSlot(result.getResult());
+				
+				success = true;
+			}
+		}
+		
+		return success;
+	}
+	
+	public void addStackToAvailableSlot(ItemStack stack)
+	{
+		boolean added = false;
+		
+		for (int i = 0; i < 9; ++i)
+		{
+			if (this.getStackInSlot(i) == null)
+			{
+				this.setInventorySlotContents(i, stack);
+				this.markDirty();
+				added = true;
+				break;
+			}
+		}
+		
+		if (!added)
+		{
+			EntityItem dropStack = new EntityItem(this.worldObj, this.getPos().getX(), this.getPos().getY() + 1, this.getPos().getZ(), stack);
+			this.worldObj.spawnEntityInWorld(dropStack);
 		}
 	}
 	
