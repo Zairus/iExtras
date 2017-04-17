@@ -358,4 +358,10 @@ public abstract class TileEntityIEBase extends TileEntityLockableLoot implements
 	{
 		return this.writeToNBT(new NBTTagCompound());
 	}
+	
+	@Override
+	public void onDataPacket(net.minecraft.network.NetworkManager net, net.minecraft.network.play.server.SPacketUpdateTileEntity pkt)
+	{
+		;
+	}
 }

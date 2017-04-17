@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Items;
@@ -22,9 +23,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.items.ItemHandlerHelper;
 import zairus.iextras.entity.IEFakePlayer;
 
-public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory
+public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory, IItemHandlerModifiable
 {
 	private IEFakePlayer fakePlayer = null;
 	private ItemStack[] chestContents = new ItemStack[10];
@@ -48,14 +51,17 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	@Override
 	public void update()
 	{
-		if (this.worldObj.isRemote)
-			return;
-		
 		++workingTicks;
 		
 		if (workingTicks % 10 == 0)
 		{
-			rightClick();
+			if (!this.worldObj.isRemote)
+			{
+				rightClick();
+			}
+			
+			IBlockState state = this.worldObj.getBlockState(getPos());
+			this.worldObj.notifyBlockUpdate(getPos(), state, state, 0);
 		}
 	}
 	
@@ -163,7 +169,8 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 			if (this.getStackInSlot(i) == null)
 			{
 				this.setInventorySlotContents(i, stack);
-				this.markDirty();
+				IBlockState state = this.worldObj.getBlockState(getPos());
+				this.worldObj.notifyBlockUpdate(getPos(), state, state, 0);
 				added = true;
 				break;
 			}
@@ -231,6 +238,16 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		return null;
 	}
 	
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> T getCapability(net.minecraftforge.common.capabilities.Capability<T> capability, net.minecraft.util.EnumFacing facing)
+	{
+		//if (capability == net.minecraftforge.items.CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
+			//return (T) (itemHandler == null ? (itemHandler = createUnSidedHandler()) : itemHandler);
+		//return super.getCapability(capability, facing);
+		return (T) this /*new net.minecraftforge.items.wrapper.InvWrapper(this)*/;
+	}
+	
 	@Override
 	public int[] getSlotsForFace(EnumFacing side)
 	{
@@ -247,5 +264,138 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	public boolean canExtractItem(int index, ItemStack stack, EnumFacing direction)
 	{
 		return index >= 0 && index < 9;
+	}
+	
+	@Override
+	public int getSlots()
+	{
+		return this.getSizeInventory();
+	}
+	
+	@Override
+	public ItemStack insertItem(int slot, ItemStack stack, boolean simulate)
+	{
+		if (stack == null)
+			return null;
+		
+		if (slot < 9)
+			return stack;
+		
+		if (!this.isItemValidForSlot(slot, stack))
+			return stack;
+		
+		ItemStack curStack = this.getStackInSlot(slot);
+		
+		int m;
+		
+		if (curStack == null)
+		{
+			m = Math.min(stack.getMaxStackSize(), this.getInventoryStackLimit());
+			
+			if (m < stack.stackSize)
+			{
+				stack = stack.copy();
+				if (!simulate)
+				{
+					this.setInventorySlotContents(slot, stack.splitStack(m));
+					this.markDirty();
+					return stack;
+				}
+				else
+				{
+					stack.stackSize -= m;
+					return stack;
+				}
+			}
+			else
+			{
+				if (!simulate)
+				{
+					this.setInventorySlotContents(slot, stack);
+					this.markDirty();
+				}
+				
+				return null;
+			}
+		}
+		else
+		{
+			if (!ItemHandlerHelper.canItemStacksStack(stack, curStack))
+				return stack;
+			
+			m = stack.getMaxStackSize() - curStack.stackSize;
+			
+			if (stack.stackSize <= m)
+			{
+				if (!simulate)
+				{
+					ItemStack copy = stack.copy();
+					copy.stackSize += curStack.stackSize;
+					this.setInventorySlotContents(slot, copy);
+					this.markDirty();
+				}
+				
+				return null;
+			}
+			else
+			{
+				stack = stack.copy();
+				if (!simulate)
+				{
+					ItemStack copy = stack.splitStack(m);
+					copy.stackSize += curStack.stackSize;
+					this.setInventorySlotContents(slot, copy);
+					this.markDirty();
+					return stack;
+				}
+				else
+				{
+					stack.stackSize -= m;
+					return stack;
+				}
+			}
+		}
+	}
+	
+	@Override
+	public ItemStack extractItem(int slot, int amount, boolean simulate)
+	{
+		if (amount == 0)
+			return null;
+		
+		if (slot == 9)
+			return null;
+		
+		ItemStack curStack = this.getStackInSlot(slot);
+		
+		if (curStack == null)
+			return null;
+		
+		if (simulate)
+		{
+			if (curStack.stackSize < amount)
+			{
+				return curStack.copy();
+			}
+			else
+			{
+				ItemStack copy = curStack.copy();
+				copy.stackSize = amount;
+				return copy;
+			}
+		}
+		else
+		{
+			int m = Math.min(curStack.stackSize, amount);
+			ItemStack decrStackSize = this.decrStackSize(slot, m);
+			this.markDirty();
+			return decrStackSize;
+		}
+	}
+	
+	@Override
+	public void setStackInSlot(int slot, ItemStack stack)
+	{
+		super.setInventorySlotContents(slot, stack);
 	}
 }

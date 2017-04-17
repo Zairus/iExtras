@@ -19,7 +19,7 @@ public class InventoryFakePlayer extends InventoryPlayer
 	@Override
 	public boolean addItemStackToInventory(@Nullable final ItemStack itemStack)
 	{
-		fakePlayer.itemAddedToInventory(itemStack);
+		fakePlayer.itemAddedToInventory(itemStack.copy());
 		
 		boolean added = super.addItemStackToInventory(itemStack);
 		
