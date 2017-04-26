@@ -21,17 +21,25 @@ import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemHandlerHelper;
 import zairus.iextras.entity.IEFakePlayer;
 
-public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory, IItemHandlerModifiable
+public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory, IItemHandlerModifiable, IEnergyStorage
 {
 	private IEFakePlayer fakePlayer = null;
 	private ItemStack[] chestContents = new ItemStack[10];
 	private int workingTicks = 0;
+	
+	private int energy;
+	private int capacity = 10000;
+    private int maxReceive = 160;
 	
 	protected String defaultName = "iexecutor";
 	
@@ -42,9 +50,15 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	
 	private void initializeFakePlayer()
 	{
-		if (this.worldObj != null && !this.worldObj.isRemote && this.fakePlayer == null)
+		if (this.worldObj != null && this.fakePlayer == null)
 		{
 			this.fakePlayer = new IEFakePlayer((WorldServer)this.worldObj, new GameProfile(UUID.fromString("858883b3-cc29-44f9-ada3-01075eee02b8"), "Iskallian_Executor"), this);
+			this.fakePlayer.connection = FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().getPlayerList().get(0).connection; /*new NetHandlerPlayServer(
+					FMLCommonHandler.instance().getMinecraftServerInstance(), 
+					FMLCommonHandler.instance().getClientToServerNetworkManager(), 
+					this.fakePlayer);*/
+			
+			net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new PlayerLoggedInEvent(this.fakePlayer));
 		}
 	}
 	
@@ -57,6 +71,7 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		{
 			if (!this.worldObj.isRemote)
 			{
+				initializeFakePlayer();
 				rightClick();
 			}
 			
@@ -67,8 +82,6 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	
 	private void rightClick()
 	{
-		initializeFakePlayer();
-		
 		if (this.fakePlayer != null)
 		{
 			// DUNSWE
@@ -242,10 +255,10 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	@Override
 	public <T> T getCapability(net.minecraftforge.common.capabilities.Capability<T> capability, net.minecraft.util.EnumFacing facing)
 	{
-		//if (capability == net.minecraftforge.items.CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
-			//return (T) (itemHandler == null ? (itemHandler = createUnSidedHandler()) : itemHandler);
-		//return super.getCapability(capability, facing);
-		return (T) this /*new net.minecraftforge.items.wrapper.InvWrapper(this)*/;
+		if (capability != null && capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
+			return (T) this;
+		
+		return super.getCapability(capability, facing);
 	}
 	
 	@Override
@@ -397,5 +410,49 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	public void setStackInSlot(int slot, ItemStack stack)
 	{
 		super.setInventorySlotContents(slot, stack);
+	}
+	
+	@Override
+	public int receiveEnergy(int maxReceive, boolean simulate)
+	{
+		if (!canReceive())
+            return 0;
+		
+        int energyReceived = Math.min(capacity - energy, Math.min(this.maxReceive, maxReceive));
+        
+        if (!simulate)
+            energy += energyReceived;
+        
+        return energyReceived;
+	}
+	
+	@Override
+	public int extractEnergy(int maxExtract, boolean simulate)
+	{
+		return 0;
+	}
+	
+	@Override
+	public int getEnergyStored()
+	{
+		return this.energy;
+	}
+	
+	@Override
+	public int getMaxEnergyStored()
+	{
+		return this.capacity;
+	}
+	
+	@Override
+	public boolean canExtract()
+	{
+		return false;
+	}
+	
+	@Override
+	public boolean canReceive()
+	{
+		return this.energy < this.capacity;
 	}
 }
