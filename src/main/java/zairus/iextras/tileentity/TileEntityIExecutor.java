@@ -8,6 +8,7 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.ISidedInventory;
@@ -37,9 +38,9 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	private ItemStack[] chestContents = new ItemStack[10];
 	private int workingTicks = 0;
 	
-	private int energy;
+	private int energy = 0;
 	private int capacity = 10000;
-    private int maxReceive = 160;
+    private int maxReceive = 80;
 	
 	protected String defaultName = "iexecutor";
 	
@@ -52,13 +53,15 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	{
 		if (this.worldObj != null && this.fakePlayer == null)
 		{
-			this.fakePlayer = new IEFakePlayer((WorldServer)this.worldObj, new GameProfile(UUID.fromString("858883b3-cc29-44f9-ada3-01075eee02b8"), "Iskallian_Executor"), this);
-			this.fakePlayer.connection = FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().getPlayerList().get(0).connection; /*new NetHandlerPlayServer(
-					FMLCommonHandler.instance().getMinecraftServerInstance(), 
-					FMLCommonHandler.instance().getClientToServerNetworkManager(), 
-					this.fakePlayer);*/
+			List<EntityPlayerMP> playerList = FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().getPlayerList();
 			
-			net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new PlayerLoggedInEvent(this.fakePlayer));
+			if (playerList.size() > 0 && playerList.get(0).connection != null)
+			{
+				this.fakePlayer = new IEFakePlayer((WorldServer)this.worldObj, new GameProfile(UUID.fromString("858883b3-cc29-44f9-ada3-01075eee02b8"), "Iskallian_Executor"), this);
+				this.fakePlayer.connection = playerList.get(0).connection; 
+				
+				net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new PlayerLoggedInEvent(this.fakePlayer));
+			}
 		}
 	}
 	
