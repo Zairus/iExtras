@@ -109,13 +109,13 @@ public class PacketPipeline extends MessageToMessageCodec<FMLProxyPacket, Abstra
 	
 	public void initalise()
 	{
-		this.channels = NetworkRegistry.INSTANCE.newChannel("ZairusHT", this);
+		this.channels = NetworkRegistry.INSTANCE.newChannel("ZairusIE", this);
 		registerPackets();
 	}
 	
 	public void registerPackets()
 	{
-		//registerPacket(PedestalPacket.class);
+		registerPacket(IExecutorPacket.class);
 	}
 	
 	public void postInitialise()

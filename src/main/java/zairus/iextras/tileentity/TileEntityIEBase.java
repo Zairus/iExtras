@@ -15,13 +15,12 @@ import net.minecraft.tileentity.TileEntityLockableLoot;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
-import net.minecraft.world.storage.loot.ILootContainer;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import zairus.iextras.IEConstants;
 import zairus.iextras.inventory.ContainerIEBase;
 
-public abstract class TileEntityIEBase extends TileEntityLockableLoot implements ITickable, ILootContainer
+public abstract class TileEntityIEBase extends TileEntityLockableLoot implements ITickable
 {
 	public int playersUsing;
 	

@@ -7,17 +7,21 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
+import net.minecraft.init.SoundEvents;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -41,12 +45,31 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	private int energy = 0;
 	private int capacity = 10000;
     private int maxReceive = 80;
-	
+    
+    private int inventoryMode = 0;
+    private int useAction = 0;
+    
 	protected String defaultName = "iexecutor";
 	
 	public TileEntityIExecutor()
 	{
 		;
+	}
+	
+	public void configureWork(int m, int a)
+	{
+		this.inventoryMode = m;
+		this.useAction = a;
+	}
+	
+	public int getInventoryMode()
+	{
+		return this.inventoryMode;
+	}
+	
+	public int getUseAction()
+	{
+		return this.useAction;
 	}
 	
 	private void initializeFakePlayer()
@@ -72,10 +95,29 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		
 		if (workingTicks % 10 == 0)
 		{
-			if (!this.worldObj.isRemote)
+			if (!this.worldObj.isRemote && this.energy >= 20)
 			{
+				boolean worked = false;
+				
 				initializeFakePlayer();
-				rightClick();
+				
+				switch(this.useAction)
+				{
+				case 0:
+					if (leftClick())
+						worked = true;
+					break;
+				default:
+					if (rightClick())
+						worked = true;
+					break;
+				}
+				
+				if (pickupItems())
+					worked = true;
+				
+				if (worked)
+					this.energy -= 20;
 			}
 			
 			IBlockState state = this.worldObj.getBlockState(getPos());
@@ -83,40 +125,138 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		}
 	}
 	
-	private void rightClick()
+	private boolean pickupItems()
 	{
+		boolean worked = false;
+		
 		if (this.fakePlayer != null)
 		{
-			// DUNSWE
-			int meta = this.getBlockMetadata();
-			EnumFacing ieFacing = EnumFacing.getFront(meta);
-			BlockPos pos = this.getPos();
-			pos = pos.offset(ieFacing);
+			BlockPos itemPos = this.getActionPos();
+			Entity toPick = this.getTargetEntity(itemPos);
 			
-			// 0 south
-			// 90 west
-			// 180 north
-			// 270 east
+			if (toPick != null && toPick instanceof EntityItem)
+			{
+				EntityItem item = (EntityItem)toPick;
+				ItemStack stack = item.getEntityItem().copy();
+				
+				if (stack != null)
+				{
+					this.addStackToAvailableSlot(stack);
+					
+					this.worldObj.playSound(
+							this.fakePlayer
+							, itemPos
+							, SoundEvents.ENTITY_ITEM_PICKUP
+							, SoundCategory.PLAYERS
+							, 1.0F
+							, 1.0F / (this.worldObj.rand.nextFloat() * 0.4F + 1.2F) + 1 * 0.5F);
+					
+					item.setDead();
+					
+					worked = true;
+				}
+			}
+		}
+		
+		return worked;
+	}
+	
+	private boolean leftClick()
+	{
+		boolean worked = false;
+		
+		if (this.fakePlayer != null)
+		{
+			BlockPos pos = this.getActionPos();
+			ItemStack actionStack = this.getStackInSlot(9);
 			
-			//pitch
-			// 0 front
-			// 90 down
-			// 180 up
+			if (!(worked = leftClickEntity(pos, actionStack)))
+				worked = leftClickBlock();
+		}
+		
+		return worked;
+	}
+	
+	private boolean leftClickEntity(BlockPos pos, ItemStack actionStack)
+	{
+		boolean success = false;
+		
+		if (actionStack != null)
+		{
+			Entity target = this.getTargetEntity(pos);
 			
-			this.fakePlayer.setPositionAndRotation(
-					pos.getX(), 
-					pos.getY() - 1, 
-					pos.getZ(), 
-					0.0F,
-					0.0F);
+			if (target != null)
+			{
+				if (this.fakePlayer.getHeldItemMainhand() == null)
+				{
+					this.equipStack(actionStack);
+				}
+				
+				this.fakePlayer.getEntityAttribute(SharedMonsterAttributes.ATTACK_SPEED).setBaseValue(1000.0D);
+				this.fakePlayer.getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(5.0D);
+				
+				this.fakePlayer.attackTargetEntityWithCurrentItem(target);
+			}
+		}
+		
+		return success;
+	}
+	
+	private boolean leftClickBlock()
+	{
+		return true;
+	}
+	
+	private void equipStack(ItemStack stack)
+	{
+		this.fakePlayer.setHeldItem(EnumHand.MAIN_HAND, stack);
+		this.fakePlayer.setActiveHand(EnumHand.MAIN_HAND);
+	}
+	
+	private Entity getTargetEntity(BlockPos pos)
+	{
+		Entity target = null;
+		
+		List<Entity> entities = this.worldObj.getEntitiesWithinAABB(Entity.class, new AxisAlignedBB(pos));
+		
+		if (entities.size() > 0)
+			target = entities.get(0);
+		
+		return target;
+	}
+	
+	private BlockPos getActionPos()
+	{
+		int meta = this.getBlockMetadata();
+		EnumFacing ieFacing = EnumFacing.getFront(meta);
+		BlockPos pos = this.getPos();
+		pos = pos.offset(ieFacing);
+		
+		this.fakePlayer.setPositionAndRotation(
+				pos.getX(), 
+				pos.getY() - 1, 
+				pos.getZ(), 
+				(meta == 3) ? 0.0F : (meta == 4) ? 90.0F : (meta == 2) ? 180.0F : 270.0F,
+				0.0F);
+		
+		return pos;
+	}
+	
+	private boolean rightClick()
+	{
+		boolean worked = false;
+		
+		if (this.fakePlayer != null)
+		{
+			BlockPos pos = this.getActionPos();
 			
 			ItemStack actionStack = this.getStackInSlot(9);
 			
-			if (!rightClickBlock(pos, actionStack))
-			{
-				rightClickEntity(pos, actionStack);
-			}
+			if (!(worked = rightClickBlock(pos, actionStack)))
+				worked = rightClickEntity(pos, actionStack);
 		}
+		
+		return worked;
 	}
 	
 	private boolean rightClickEntity(BlockPos pos, ItemStack actionStack)
@@ -125,15 +265,11 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		
 		if (actionStack != null)
 		{
-			List<Entity> entities = this.worldObj.getEntitiesWithinAABB(Entity.class, new AxisAlignedBB(pos));
+			Entity target = this.getTargetEntity(pos);
 			
-			if (entities.size() > 0)
+			if (target != null)
 			{
-				Entity target = entities.get(0);
-				
-				this.fakePlayer.setHeldItem(EnumHand.MAIN_HAND, actionStack);
-				this.fakePlayer.setActiveHand(EnumHand.MAIN_HAND);
-				
+				this.equipStack(actionStack);
 				this.fakePlayer.interact(target, actionStack, EnumHand.MAIN_HAND);
 				
 				ItemStack heldStack = this.fakePlayer.getHeldItemMainhand();
@@ -162,11 +298,14 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 			this.fakePlayer.setActiveHand(EnumHand.MAIN_HAND);
 			ActionResult<ItemStack> result = actionStack.getItem().onItemRightClick(actionStack, worldObj, fakePlayer, EnumHand.MAIN_HAND);
 			
-			if (actionStack.stackSize <= 0 || actionStack.getItem() == Items.WATER_BUCKET)
+			if (actionStack.stackSize <= 0)
 				this.setInventorySlotContents(9, null);
 			
 			if (result != null && result.getResult() != actionStack)
 			{
+				if (actionStack.getItem() == Items.WATER_BUCKET)
+					this.setInventorySlotContents(9, null);
+				
 				addStackToAvailableSlot(result.getResult());
 				
 				success = true;
@@ -176,15 +315,18 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		return success;
 	}
 	
-	public void addStackToAvailableSlot(ItemStack stack)
+	public boolean addStackToAvailableSlot(ItemStack stack)
 	{
 		boolean added = false;
 		
+		ItemStack resultStack = null;
+		
 		for (int i = 0; i < 9; ++i)
 		{
-			if (this.getStackInSlot(i) == null)
+			resultStack = this.insertStackIntoSlot(i, stack, false);
+			
+			if (resultStack == null)
 			{
-				this.setInventorySlotContents(i, stack);
 				IBlockState state = this.worldObj.getBlockState(getPos());
 				this.worldObj.notifyBlockUpdate(getPos(), state, state, 0);
 				added = true;
@@ -192,11 +334,13 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 			}
 		}
 		
-		if (!added)
+		if (!added && resultStack != null)
 		{
-			EntityItem dropStack = new EntityItem(this.worldObj, this.getPos().getX(), this.getPos().getY() + 1, this.getPos().getZ(), stack);
+			EntityItem dropStack = new EntityItem(this.worldObj, this.getPos().getX(), this.getPos().getY() + 1, this.getPos().getZ(), resultStack);
 			this.worldObj.spawnEntityInWorld(dropStack);
 		}
+		
+		return added;
 	}
 	
 	@Override
@@ -258,10 +402,28 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	@Override
 	public <T> T getCapability(net.minecraftforge.common.capabilities.Capability<T> capability, net.minecraft.util.EnumFacing facing)
 	{
-		if (capability != null && capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
-			return (T) this;
+		if (capability != null)
+		{
+			if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
+				return (T) this;
+			
+			if (capability.getName() == "net.minecraftforge.energy.IEnergyStorage")
+				return (T) this;
+		}
 		
 		return super.getCapability(capability, facing);
+	}
+	
+	@Override
+	public boolean hasCapability(net.minecraftforge.common.capabilities.Capability<?> capability, net.minecraft.util.EnumFacing facing)
+	{
+		//boolean res = super.hasCapability(capability, facing);
+		
+		if (capability.getName() == "net.minecraftforge.energy.IEnergyStorage")
+			return true;
+		
+		//IExtras.logger.info("c: " + capability.getName() + ", f: " + facing + ", r: " + res);
+		return super.hasCapability(capability, facing);
 	}
 	
 	@Override
@@ -273,13 +435,13 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	@Override
 	public boolean canInsertItem(int index, ItemStack itemStack, EnumFacing direction)
 	{
-		return index == 9;
+		return ((this.inventoryMode == 0 || this.inventoryMode == 2) && index == 9);
 	}
 	
 	@Override
 	public boolean canExtractItem(int index, ItemStack stack, EnumFacing direction)
 	{
-		return index >= 0 && index < 9;
+		return ((this.inventoryMode == 1 || this.inventoryMode == 2) && (index >= 0 && index < 9));
 	}
 	
 	@Override
@@ -288,14 +450,10 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		return this.getSizeInventory();
 	}
 	
-	@Override
-	public ItemStack insertItem(int slot, ItemStack stack, boolean simulate)
+	private ItemStack insertStackIntoSlot(int slot, ItemStack stack, boolean simulate)
 	{
 		if (stack == null)
 			return null;
-		
-		if (slot < 9)
-			return stack;
 		
 		if (!this.isItemValidForSlot(slot, stack))
 			return stack;
@@ -374,8 +532,23 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	}
 	
 	@Override
+	public ItemStack insertItem(int slot, ItemStack stack, boolean simulate)
+	{
+		if (!this.canInsertItem(slot, stack, null))
+			return stack;
+		
+		if (slot < 9)
+			return stack;
+		
+		return this.insertStackIntoSlot(slot, stack, simulate);
+	}
+	
+	@Override
 	public ItemStack extractItem(int slot, int amount, boolean simulate)
 	{
+		if (!this.canExtractItem(slot, null, null))
+			return null;
+		
 		if (amount == 0)
 			return null;
 		
@@ -457,5 +630,27 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	public boolean canReceive()
 	{
 		return this.energy < this.capacity;
+	}
+	
+	@Override
+	public NBTTagCompound writeToNBT(NBTTagCompound compound)
+	{
+		NBTTagCompound c = super.writeToNBT(compound);
+		
+		c.setInteger("executor_energy", this.energy);
+		c.setInteger("executor_inventoryMode", this.inventoryMode);
+		c.setInteger("executor_useAction", this.useAction);
+		
+		return c;
+	}
+	
+	@Override
+	public void readFromNBT(NBTTagCompound compound)
+	{
+		super.readFromNBT(compound);
+		
+		this.energy = compound.getInteger("executor_energy");
+		this.inventoryMode = compound.getInteger("executor_inventoryMode");
+		this.useAction = compound.getInteger("executor_useAction");
 	}
 }

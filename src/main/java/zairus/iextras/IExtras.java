@@ -19,6 +19,7 @@ import zairus.iextras.inventory.crafting.IECraftingManager;
 import zairus.iextras.item.IEItems;
 import zairus.iextras.proxy.CommonProxy;
 import zairus.iextras.sound.IESoundEvents;
+import zairus.iextras.util.network.PacketPipeline;
 
 @Mod(modid = IEConstants.MODID, name = IEConstants.MODNAME, version = IEConstants.VERSION)
 public class IExtras
@@ -29,7 +30,7 @@ public class IExtras
 	@SidedProxy(clientSide = IEConstants.CLIENT_PROXY, serverSide = IEConstants.COMMON_PROXY)
 	public static CommonProxy proxy;
 	
-	//Packet Pipeline
+	public static PacketPipeline packetPipeline = new PacketPipeline();
 	
 	public static Logger logger;
 	
@@ -57,7 +58,7 @@ public class IExtras
     public void init(FMLInitializationEvent event)
     {
 		IExtras.proxy.init(event);
-		//Packer pipeline initialize
+		IExtras.packetPipeline.initalise();
 		
 		IEItems.register();
 		IEBlocks.register();
