@@ -18,6 +18,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.Mirror;
 import net.minecraft.util.Rotation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import zairus.iextras.IExtras;
 import zairus.iextras.gui.GuiHandler;
@@ -128,6 +129,26 @@ public class BlockIExecutor extends BlockIEContainerBase implements IBlockBase
 	@Override
 	public IBlockState onBlockPlaced(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer)
 	{
-		return this.getDefaultState().withProperty(FACING, facing);
+		return this.getDefaultState().withProperty(FACING, getFacingFromEntity(pos, placer) ); //facing
+	}
+	
+	public static EnumFacing getFacingFromEntity(BlockPos pos, EntityLivingBase entity)
+	{
+		if (MathHelper.abs((float)entity.posX - (float)pos.getX()) < 2.0F && MathHelper.abs((float)entity.posZ - (float)pos.getZ()) < 2.0F)
+		{
+			double d0 = entity.posY + (double)entity.getEyeHeight();
+			
+			if (d0 - (double)pos.getY() > 2.0D)
+			{
+				return EnumFacing.UP;
+			}
+			
+			if ((double)pos.getY() - d0 > 0.0D)
+			{
+				return EnumFacing.DOWN;
+			}
+		}
+		
+		return entity.getHorizontalFacing().getOpposite();
 	}
 }

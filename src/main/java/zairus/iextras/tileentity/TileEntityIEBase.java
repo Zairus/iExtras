@@ -361,6 +361,6 @@ public abstract class TileEntityIEBase extends TileEntityLockableLoot implements
 	@Override
 	public void onDataPacket(net.minecraft.network.NetworkManager net, net.minecraft.network.play.server.SPacketUpdateTileEntity pkt)
 	{
-		;
+		this.readFromNBT(pkt.getNbtCompound());
 	}
 }

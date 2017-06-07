@@ -1,5 +1,10 @@
 package zairus.iextras.client.gui;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
@@ -42,8 +47,35 @@ public class GuiIExecutor extends GuiContainer
 		
 		TileEntityIExecutor e = (TileEntityIExecutor)this.inventory;
 		
+		List<String> bTooltip;
+		
 		this.buttonMode.curStep = e.getInventoryMode();
+		
+		bTooltip = new ArrayList<String>();
+		bTooltip.add("Allow only input.");
+		this.buttonMode.tooltip.add(bTooltip);
+		
+		bTooltip = new ArrayList<String>();
+		bTooltip.add("Allow only output.");
+		this.buttonMode.tooltip.add(bTooltip);
+		
+		bTooltip = new ArrayList<String>();
+		bTooltip.add("Allow in/out.");
+		this.buttonMode.tooltip.add(bTooltip);
+		
+		bTooltip = new ArrayList<String>();
+		bTooltip.add("Block input/output.");
+		this.buttonMode.tooltip.add(bTooltip);
+		
 		this.buttonAction.curStep = e.getUseAction();
+		
+		bTooltip = new ArrayList<String>();
+		bTooltip.add("Left click.");
+		this.buttonAction.tooltip.add(bTooltip);
+		
+		bTooltip = new ArrayList<String>();
+		bTooltip.add("Right click.");
+		this.buttonAction.tooltip.add(bTooltip);
 		
 		super.initGui();
 	}
@@ -83,6 +115,33 @@ public class GuiIExecutor extends GuiContainer
 	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY)
 	{
 		this.fontRendererObj.drawString(((TileEntityIEBase)inventory).getGUIDisplayName(), 7, 4, 4210752);
+		
+		int i = (this.width - this.xSize) / 2;
+        int j = (this.height - this.ySize) / 2;
+		
+		for (GuiButton b : this.buttonList)
+		{
+        	if (mouseX >= b.xPosition && mouseX <= (b.xPosition + b.width) && mouseY >= b.yPosition && mouseY <= (b.yPosition + b.height))
+        	{
+        		if (b instanceof GuiExecutorConfigureButton)
+    			{
+    				GuiExecutorConfigureButton eb = (GuiExecutorConfigureButton)b;
+    				
+    				if (eb.getStepTooltip() != null)
+    					this.drawHoveringText(eb.getStepTooltip(), mouseX - i, mouseY - j);
+    			}
+        	}
+		}
+		
+		if (mouseX >= (i + 156) && mouseX <= (i + 156 + 12) && mouseY >= (j + 6) && mouseY <= (j + 6 + 72))
+        {
+			TileEntityIExecutor e = (TileEntityIExecutor)this.inventory;
+			
+			List<String> energyTooltip = new ArrayList<String>();
+			energyTooltip.add("RF: " + e.getEnergyStored());
+			
+        	this.drawHoveringText(energyTooltip, mouseX - i, mouseY - j + 10);
+        }
 	}
 	
 	@Override
@@ -98,6 +157,30 @@ public class GuiIExecutor extends GuiContainer
         this.setButtonPositions(i, j);
         
         this.drawTexturedModalRect(i, j, 0, 0, this.xSize, this.ySize);
+        
+        // Energy
+        // Bar BG
+        this.drawTexturedModalRect(i + 156, j + 6, 176, 0, 12, 72);
+        
+        // max: 75 - 68
+        // min: 75 - 0
+        // 34 steps
+        
+        TileEntityIExecutor e = (TileEntityIExecutor)this.inventory;
+        int eBars = (int)(((float)e.getEnergyStored() / (float)e.getMaxEnergyStored()) * 34.0F);
+        
+        for (int ib = 0; ib <= eBars; ++ib)
+        {
+        	this.drawTexturedModalRect(i + 158, j + (75 - (ib * 2)), 188, 0, 8, 2);
+        }
+        
+        // Bar Energy :: 68
+        /*
+        this.drawTexturedModalRect(i + 158, j + 75, 188, 0, 8, 2);
+        this.drawTexturedModalRect(i + 158, j + 73, 188, 0, 8, 2);
+        this.drawTexturedModalRect(i + 158, j + 71, 188, 0, 8, 2);
+        this.drawTexturedModalRect(i + 158, j + 7, 188, 0, 8, 2);
+        */
 	}
 	
 	private void setButtonPositions(int left, int top)
@@ -111,6 +194,8 @@ public class GuiIExecutor extends GuiContainer
 		private final int type;
 		public final int maxStep;
 		public int curStep = 0;
+		
+		public List<List<String>> tooltip = new ArrayList<List<String>>();
 		
 		public GuiExecutorConfigureButton(int buttonId, int buttonType, int maxStep, int x, int y, int width, int height, String buttonText)
 		{
@@ -135,6 +220,17 @@ public class GuiIExecutor extends GuiContainer
 		{
 			this.xPosition = x;
 			this.yPosition = y;
+		}
+		
+		@Nullable
+		public List<String> getStepTooltip()
+		{
+			if (this.curStep < this.tooltip.size())
+			{
+				return this.tooltip.get(curStep);
+			}
+			
+			return null;
 		}
 	}
 }

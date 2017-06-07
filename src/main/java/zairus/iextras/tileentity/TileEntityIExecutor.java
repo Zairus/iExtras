@@ -3,6 +3,8 @@ package zairus.iextras.tileentity;
 import java.util.List;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.block.state.IBlockState;
@@ -17,6 +19,7 @@ import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
@@ -34,6 +37,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemHandlerHelper;
+import zairus.iextras.IEConfig;
 import zairus.iextras.entity.IEFakePlayer;
 
 public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory, IItemHandlerModifiable, IEnergyStorage
@@ -43,8 +47,9 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	private int workingTicks = 0;
 	
 	private int energy = 0;
-	private int capacity = 10000;
-    private int maxReceive = 80;
+	private int capacity = IEConfig.IEXECUTOR_ENERGY_CAPACITY;
+    private int maxReceive = IEConfig.IEXECUTOR_ENERGY_RECEIVE;
+    private int consumption = IEConfig.IEXECUTOR_ENERGY_CONSUMPTION;
     
     private int inventoryMode = 0;
     private int useAction = 0;
@@ -95,7 +100,7 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		
 		if (workingTicks % 10 == 0)
 		{
-			if (!this.worldObj.isRemote && this.energy >= 20)
+			if (!this.worldObj.isRemote && this.energy >= consumption)
 			{
 				boolean worked = false;
 				
@@ -117,7 +122,7 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 					worked = true;
 				
 				if (worked)
-					this.energy -= 20;
+					this.energy -= consumption;
 			}
 			
 			IBlockState state = this.worldObj.getBlockState(getPos());
@@ -196,6 +201,8 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 				this.fakePlayer.getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(5.0D);
 				
 				this.fakePlayer.attackTargetEntityWithCurrentItem(target);
+				
+				success = true;
 			}
 		}
 		
@@ -204,7 +211,7 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	
 	private boolean leftClickBlock()
 	{
-		return true;
+		return false;
 	}
 	
 	private void equipStack(ItemStack stack)
@@ -417,12 +424,9 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	@Override
 	public boolean hasCapability(net.minecraftforge.common.capabilities.Capability<?> capability, net.minecraft.util.EnumFacing facing)
 	{
-		//boolean res = super.hasCapability(capability, facing);
-		
 		if (capability.getName() == "net.minecraftforge.energy.IEnergyStorage")
 			return true;
 		
-		//IExtras.logger.info("c: " + capability.getName() + ", f: " + facing + ", r: " + res);
 		return super.hasCapability(capability, facing);
 	}
 	
@@ -652,5 +656,24 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		this.energy = compound.getInteger("executor_energy");
 		this.inventoryMode = compound.getInteger("executor_inventoryMode");
 		this.useAction = compound.getInteger("executor_useAction");
+	}
+	
+	@Override
+	@Nullable
+	public SPacketUpdateTileEntity getUpdatePacket()
+	{
+		return new SPacketUpdateTileEntity(this.getPos(), 1, this.getUpdateTag());
+	}
+	
+	@Override
+	public NBTTagCompound getUpdateTag()
+	{
+		return this.writeToNBT(new NBTTagCompound());
+	}
+	
+	@Override
+	public void onDataPacket(net.minecraft.network.NetworkManager net, net.minecraft.network.play.server.SPacketUpdateTileEntity pkt)
+	{
+		this.readFromNBT(pkt.getNbtCompound());
 	}
 }
