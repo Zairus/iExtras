@@ -15,7 +15,6 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -40,7 +39,7 @@ import net.minecraftforge.items.ItemHandlerHelper;
 import zairus.iextras.IEConfig;
 import zairus.iextras.entity.IEFakePlayer;
 
-public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInventory, IItemHandlerModifiable, IEnergyStorage
+public class TileEntityIExecutor extends TileEntityIEBase implements IEnergyStorage
 {
 	private IEFakePlayer fakePlayer = null;
 	private ItemStack[] chestContents = new ItemStack[10];
@@ -412,7 +411,7 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		if (capability != null)
 		{
 			if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
-				return (T) this;
+				return (T) new InnerItemHandler(this);
 			
 			if (capability.getName() == "net.minecraftforge.energy.IEnergyStorage")
 				return (T) this;
@@ -448,7 +447,6 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		return ((this.inventoryMode == 1 || this.inventoryMode == 2) && (index >= 0 && index < 9));
 	}
 	
-	@Override
 	public int getSlots()
 	{
 		return this.getSizeInventory();
@@ -535,7 +533,6 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		}
 	}
 	
-	@Override
 	public ItemStack insertItem(int slot, ItemStack stack, boolean simulate)
 	{
 		if (!this.canInsertItem(slot, stack, null))
@@ -547,7 +544,6 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		return this.insertStackIntoSlot(slot, stack, simulate);
 	}
 	
-	@Override
 	public ItemStack extractItem(int slot, int amount, boolean simulate)
 	{
 		if (!this.canExtractItem(slot, null, null))
@@ -586,7 +582,6 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 		}
 	}
 	
-	@Override
 	public void setStackInSlot(int slot, ItemStack stack)
 	{
 		super.setInventorySlotContents(slot, stack);
@@ -675,5 +670,45 @@ public class TileEntityIExecutor extends TileEntityIEBase implements ISidedInven
 	public void onDataPacket(net.minecraft.network.NetworkManager net, net.minecraft.network.play.server.SPacketUpdateTileEntity pkt)
 	{
 		this.readFromNBT(pkt.getNbtCompound());
+	}
+	
+	public class InnerItemHandler implements IItemHandlerModifiable
+	{
+		public final TileEntityIExecutor executor;
+		
+		public InnerItemHandler(TileEntityIExecutor e)
+		{
+			this.executor = e;
+		}
+		
+		@Override
+		public int getSlots()
+		{
+			return this.executor.getSlots();
+		}
+		
+		@Override
+		public ItemStack getStackInSlot(int slot)
+		{
+			return this.executor.getStackInSlot(slot);
+		}
+		
+		@Override
+		public ItemStack insertItem(int slot, ItemStack stack, boolean simulate)
+		{
+			return this.executor.insertItem(slot, stack, simulate);
+		}
+		
+		@Override
+		public ItemStack extractItem(int slot, int amount, boolean simulate)
+		{
+			return this.executor.extractItem(slot, amount, simulate);
+		}
+		
+		@Override
+		public void setStackInSlot(int slot, ItemStack stack)
+		{
+			this.executor.setStackInSlot(slot, stack);
+		}
 	}
 }

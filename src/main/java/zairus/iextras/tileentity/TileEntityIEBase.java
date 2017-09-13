@@ -6,6 +6,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -20,7 +21,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import zairus.iextras.IEConstants;
 import zairus.iextras.inventory.ContainerIEBase;
 
-public abstract class TileEntityIEBase extends TileEntityLockableLoot implements ITickable
+public abstract class TileEntityIEBase extends TileEntityLockableLoot implements ITickable, ISidedInventory
 {
 	public int playersUsing;
 	
@@ -116,7 +117,7 @@ public abstract class TileEntityIEBase extends TileEntityLockableLoot implements
 	@Override
 	public ItemStack getStackInSlot(int index)
 	{
-		this.fillWithLoot((EntityPlayer)null);
+		//this.fillWithLoot((EntityPlayer)null);
 		return index < getChestContents().length ? getChestContents()[index] : null;
 	}
 	
